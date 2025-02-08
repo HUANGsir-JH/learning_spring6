@@ -1,0 +1,287 @@
+在 Spring 6 中，国际化（i18n）的支持依然延续了之前版本的强大功能。Spring 提供了一套完整的机制来支持多语言应用的开发，主要通过 `MessageSource` 接口和相关的实现类来实现国际化。
+
+### 1. **什么是 i18n？**
+
+**i18n** 是 "internationalization" 的缩写，表示国际化。它的目标是让应用程序能够根据用户的语言环境（Locale）动态地显示不同的语言内容。例如，一个 Web 应用可以根据用户的浏览器语言设置自动切换为中文、英文或其他语言。
+
+Spring 框架通过 `MessageSource` 接口提供了对 i18n 的支持，允许开发者轻松地管理多语言资源文件，并根据用户的 `Locale` 动态加载相应的消息。
+
+### 2. **Spring 的 i18n 核心组件**
+
+#### 2.1 **`MessageSource` 接口**
+
+`MessageSource` 是 Spring 国际化的核心接口，定义了获取国际化消息的方法。它有以下几个常用方法：
+
+- **`String getMessage(String code, Object[] args, String defaultMessage, Locale locale)`**：
+  - 根据指定的消息代码（`code`）、参数（`args`）、默认消息（`defaultMessage`）和 `Locale` 获取国际化消息。
+
+- **`String getMessage(String code, Object[] args, Locale locale)`**：
+  - 根据指定的消息代码（`code`）、参数（`args`）和 `Locale` 获取国际化消息。如果找不到对应的消息，则抛出 `NoSuchMessageException` 异常。
+
+- **`String getMessage(MessageSourceResolvable resolvable, Locale locale)`**：
+  - 根据 `MessageSourceResolvable` 对象和 `Locale` 获取国际化消息。
+
+#### 2.2 **`MessageSource` 的实现类**
+
+Spring 提供了几个常用的 `MessageSource` 实现类，用于加载不同类型的资源文件：
+
+- **`ResourceBundleMessageSource`**：基于 Java 的 `ResourceBundle` 机制加载资源文件。它是最常用的实现类，适用于大多数场景。
+
+- **`ReloadableResourceBundleMessageSource`**：与 `ResourceBundleMessageSource` 类似，但它支持热加载资源文件，即在不重启应用的情况下重新加载资源文件。适用于需要频繁更新资源文件的场景。
+
+- **`StaticMessageSource`**：主要用于测试，允许手动注册消息，而不是从资源文件中加载。
+
+### 3. **如何使用 Spring 的 i18n 功能**
+
+#### 3.1 **配置 `MessageSource`**
+
+首先，你需要在 Spring 配置中定义一个 `MessageSource` Bean。通常情况下，我们会使用 `ResourceBundleMessageSource` 或 `ReloadableResourceBundleMessageSource`。
+
+##### 3.1.1 使用 XML 配置
+
+```xml
+<bean id="messageSource" class="org.springframework.context.support.ResourceBundleMessageSource">
+    <property name="basename" value="messages" />
+</bean>
+```
+
+##### 3.1.2 使用 Java 配置
+
+```java
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.context.support.ResourceBundleMessageSource;
+
+@Configuration
+public class AppConfig {
+
+    @Bean
+    public ResourceBundleMessageSource messageSource() {
+        ResourceBundleMessageSource source = new ResourceBundleMessageSource();
+        source.setBasename("messages");
+        return source;
+    }
+}
+```
+
+#### 3.2 **创建资源文件**
+
+资源文件的命名规则通常是 `basename_language_country.properties`，其中 `basename` 是你在 `MessageSource` 中配置的基础名称，`language` 是语言代码，`country` 是国家代码。
+
+例如，假设你配置了 `basename` 为 `messages`，那么你可以创建以下资源文件：
+
+- `messages_en_US.properties`（美国英语）
+- `messages_zh_CN.properties`（简体中文）
+- `messages_fr_FR.properties`（法语）
+
+##### 示例资源文件
+
+`messages_en_US.properties`：
+```properties
+greeting=Hello, {0}!
+farewell=Goodbye, {0}!
+```
+
+`messages_zh_CN.properties`：
+```properties
+greeting=你好，{0}！
+farewell=再见，{0}！
+```
+
+#### 3.3 **在代码中使用 `MessageSource`**
+
+一旦配置好 `MessageSource` 并创建了资源文件，你就可以在代码中使用它来获取国际化消息。
+
+##### 3.3.1 直接注入 `MessageSource`
+
+你可以通过 `@Autowired` 注解将 `MessageSource` 注入到你的 Bean 中，并使用它来获取消息。
+
+```java
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.MessageSource;
+import org.springframework.stereotype.Component;
+
+import java.util.Locale;
+
+@Component
+public class MyService {
+
+    @Autowired
+    private MessageSource messageSource;
+
+    public void printMessages(Locale locale) {
+        String greeting = messageSource.getMessage("greeting", new Object[]{"John"}, locale);
+        String farewell = messageSource.getMessage("farewell", new Object[]{"John"}, locale);
+
+        System.out.println(greeting);  // 输出：Hello, John! 或 你好，John！
+        System.out.println(farewell);  // 输出：Goodbye, John! 或 再见，John！
+    }
+}
+```
+
+##### 3.3.2 在控制器中使用 `MessageSource`
+
+如果你在 Web 应用中使用 Spring MVC，可以在控制器中使用 `MessageSource` 来返回国际化的消息。
+
+```java
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.MessageSource;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.util.Locale;
+
+@RestController
+public class MyController {
+
+    @Autowired
+    private MessageSource messageSource;
+
+    @GetMapping("/greeting")
+    public String greeting(@RequestHeader(name = "Accept-Language", required = false) Locale locale) {
+        return messageSource.getMessage("greeting", new Object[]{"User"}, locale);
+    }
+}
+```
+
+在这个例子中，`@RequestHeader` 注解用于从 HTTP 请求头中获取用户的 `Locale`，然后根据用户的语言环境返回相应的问候语。
+
+#### 3.4 **使用 `ReloadableResourceBundleMessageSource` 热加载资源文件**
+
+如果你希望在不重启应用的情况下更新资源文件，可以使用 `ReloadableResourceBundleMessageSource`。它允许你在运行时重新加载资源文件。
+
+```java
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.context.support.ReloadableResourceBundleMessageSource;
+
+@Configuration
+public class AppConfig {
+
+    @Bean
+    public ReloadableResourceBundleMessageSource messageSource() {
+        ReloadableResourceBundleMessageSource source = new ReloadableResourceBundleMessageSource();
+        source.setBasename("classpath:messages");
+        source.setCacheSeconds(5);  // 设置缓存时间为 5 秒
+        return source;
+    }
+}
+```
+
+在这个配置中，`setCacheSeconds(5)` 表示资源文件的缓存时间为 5 秒。超过这个时间后，Spring 会重新加载资源文件。
+
+### 4. **Spring MVC 中的 i18n 支持**
+
+在 Spring MVC 中，Spring 提供了对 i18n 的内置支持，主要通过 `LocaleResolver` 和 `LocaleChangeInterceptor` 来实现。
+
+#### 4.1 **`LocaleResolver`**
+
+`LocaleResolver` 用于解析用户的 `Locale`，即用户的语言环境。Spring 提供了几种常见的 `LocaleResolver` 实现：
+
+- **`AcceptHeaderLocaleResolver`**：根据 HTTP 请求头中的 `Accept-Language` 字段解析用户的 `Locale`。
+
+- **`CookieLocaleResolver`**：通过 Cookie 来存储用户的 `Locale`，并在后续请求中读取。
+
+- **`SessionLocaleResolver`**：通过用户的会话（Session）来存储用户的 `Locale`。
+
+##### 配置 `LocaleResolver`
+
+```java
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.web.servlet.LocaleResolver;
+import org.springframework.web.servlet.i18n.SessionLocaleResolver;
+
+import java.util.Locale;
+
+@Configuration
+public class WebConfig {
+
+    @Bean
+    public LocaleResolver localeResolver() {
+        SessionLocaleResolver slr = new SessionLocaleResolver();
+        slr.setDefaultLocale(Locale.US);  // 默认语言为美国英语
+        return slr;
+    }
+}
+```
+
+#### 4.2 **`LocaleChangeInterceptor`**
+
+`LocaleChangeInterceptor` 是一个拦截器，允许用户通过请求参数（如 `lang`）来更改语言环境。例如，用户可以通过访问 `/home?lang=zh_CN` 来切换到简体中文。
+
+##### 配置 `LocaleChangeInterceptor`
+
+```java
+import org.springframework.context.annotation.Configuration;
+import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+import org.springframework.web.servlet.i18n.LocaleChangeInterceptor;
+
+@Configuration
+public class WebConfig implements WebMvcConfigurer {
+
+    @Override
+    public void addInterceptors(InterceptorRegistry registry) {
+        LocaleChangeInterceptor localeInterceptor = new LocaleChangeInterceptor();
+        localeInterceptor.setParamName("lang");  // 通过 lang 参数切换语言
+        registry.addInterceptor(localeInterceptor);
+    }
+}
+```
+
+#### 4.3 **完整示例**
+
+```java
+import org.springframework.context.MessageSource;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.context.support.ReloadableResourceBundleMessageSource;
+import org.springframework.web.servlet.LocaleResolver;
+import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+import org.springframework.web.servlet.i18n.LocaleChangeInterceptor;
+import org.springframework.web.servlet.i18n.SessionLocaleResolver;
+
+import java.util.Locale;
+
+@Configuration
+public class WebConfig implements WebMvcConfigurer {
+
+    // 配置 MessageSource
+    @Bean
+    public MessageSource messageSource() {
+        ReloadableResourceBundleMessageSource source = new ReloadableResourceBundleMessageSource();
+        source.setBasename("classpath:messages");
+        source.setCacheSeconds(5);  // 设置缓存时间为 5 秒
+        return source;
+    }
+
+    // 配置 LocaleResolver
+    @Bean
+    public LocaleResolver localeResolver() {
+        SessionLocaleResolver slr = new SessionLocaleResolver();
+        slr.setDefaultLocale(Locale.US);  // 默认语言为美国英语
+        return slr;
+    }
+
+    // 配置 LocaleChangeInterceptor
+    @Override
+    public void addInterceptors(InterceptorRegistry registry) {
+        LocaleChangeInterceptor localeInterceptor = new LocaleChangeInterceptor();
+        localeInterceptor.setParamName("lang");  // 通过 lang 参数切换语言
+        registry.addInterceptor(localeInterceptor);
+    }
+}
+```
+
+### 5. **总结**
+
+- **`MessageSource`** 是 Spring 国际化的核心接口，负责加载和管理多语言资源文件。
+- **资源文件** 的命名规则通常是 `basename_language_country.properties`，并通过 `MessageSource` 加载。
+- **`LocaleResolver`** 用于解析用户的语言环境，常见的实现包括 `AcceptHeaderLocaleResolver`、`CookieLocaleResolver` 和 `SessionLocaleResolver`。
+- **`LocaleChangeInterceptor`** 允许用户通过请求参数（如 `lang`）来更改语言环境。
+- **`ReloadableResourceBundleMessageSource`** 支持热加载资源文件，适合需要频繁更新资源文件的场景。
+
+通过这些机制，Spring 提供了一个强大且灵活的国际化解决方案，帮助开发者轻松构建多语言应用。
