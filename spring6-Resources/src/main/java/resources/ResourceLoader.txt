@@ -1,0 +1,241 @@
+`ResourceLoader` 是 Spring 框架中用于加载资源的核心接口之一。它提供了一种统一的方式来加载不同类型的资源（如类路径资源、文件系统资源、URL 资源等）。通过 `ResourceLoader`，你可以轻松地获取 `Resource` 对象，并对其进行操作。
+
+### 1. `ResourceLoader` 接口简介
+
+`ResourceLoader` 接口位于 `org.springframework.core.io` 包中，定义了以下方法：
+
+- **`Resource getResource(String location)`**：根据指定的资源位置返回一个 `Resource` 对象。
+
+  - `location` 参数可以是多种格式的资源路径：
+    - **类路径资源**：以 `classpath:` 开头，例如 `classpath:config.properties`。
+    - **文件系统资源**：以 `file:` 开头，例如 `file:/path/to/file.txt`。
+    - **URL 资源**：以 `http:` 或 `ftp:` 开头，例如 `http://example.com/resource.txt`。
+    - **相对路径资源**：如果路径不以任何前缀开头，则会被解析为相对于当前工作目录的文件系统资源。
+
+### 2. `ResourceLoader` 的实现类
+
+Spring 提供了多个 `ResourceLoader` 的实现类，其中最常用的是 `DefaultResourceLoader` 和 `ApplicationContext`。
+
+#### 2.1 `DefaultResourceLoader`
+
+`DefaultResourceLoader` 是 `ResourceLoader` 的默认实现，它可以加载类路径资源、文件系统资源和 URL 资源。
+
+```java
+import org.springframework.core.io.DefaultResourceLoader;
+import org.springframework.core.io.Resource;
+
+public class DefaultResourceLoaderExample {
+    public static void main(String[] args) {
+        DefaultResourceLoader resourceLoader = new DefaultResourceLoader();
+
+        // 加载类路径资源
+        Resource classPathResource = resourceLoader.getResource("classpath:config.properties");
+
+        // 加载文件系统资源
+        Resource fileSystemResource = resourceLoader.getResource("file:/path/to/file.txt");
+
+        // 加载 URL 资源
+        Resource urlResource = resourceLoader.getResource("http://example.com/resource.txt");
+
+        System.out.println("ClassPathResource exists: " + classPathResource.exists());
+        System.out.println("FileSystemResource exists: " + fileSystemResource.exists());
+        System.out.println("UrlResource exists: " + urlResource.exists());
+    }
+}
+```
+
+#### 2.2 `ApplicationContext` 作为 `ResourceLoader`
+
+在 Spring 应用中，`ApplicationContext` 本身也实现了 `ResourceLoader` 接口，因此你可以直接使用 `ApplicationContext` 来加载资源。
+
+```java
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+import org.springframework.core.io.Resource;
+
+public class ApplicationContextResourceLoaderExample {
+    public static void main(String[] args) {
+        ApplicationContext context = new AnnotationConfigApplicationContext();
+
+        // 加载类路径资源
+        Resource resource = context.getResource("classpath:config.properties");
+
+        if (resource.exists()) {
+            System.out.println("Resource exists!");
+        } else {
+            System.out.println("Resource does not exist.");
+        }
+    }
+}
+```
+
+### 3. `ResourceLoader` 的使用场景
+
+#### 3.1 加载配置文件
+
+在 Spring 应用中，经常需要加载配置文件（如 `.properties` 或 `.yaml` 文件）。可以使用 `ResourceLoader` 来加载这些配置文件。
+
+```java
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.ResourceLoader;
+import org.springframework.core.io.DefaultResourceLoader;
+
+import java.io.InputStream;
+import java.util.Properties;
+
+public class ConfigLoader {
+    public static void main(String[] args) throws Exception {
+        ResourceLoader resourceLoader = new DefaultResourceLoader();
+        Resource resource = resourceLoader.getResource("classpath:application.properties");
+
+        Properties properties = new Properties();
+        try (InputStream inputStream = resource.getInputStream()) {
+            properties.load(inputStream);
+        }
+
+        System.out.println("Property value: " + properties.getProperty("key"));
+    }
+}
+```
+
+#### 3.2 访问文件系统中的文件
+
+如果你需要访问本地文件系统中的文件，可以使用 `ResourceLoader` 来加载文件资源。
+
+```java
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.ResourceLoader;
+import org.springframework.core.io.DefaultResourceLoader;
+
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+
+public class FileLoader {
+    public static void main(String[] args) throws Exception {
+        ResourceLoader resourceLoader = new DefaultResourceLoader();
+        Resource resource = resourceLoader.getResource("file:/path/to/file.txt");
+
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(resource.getInputStream()))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                System.out.println(line);
+            }
+        }
+    }
+}
+```
+
+#### 3.3 访问远程资源
+
+如果你需要访问远程资源（如 HTTP 请求返回的数据），可以使用 `ResourceLoader` 来加载 URL 资源。
+
+```java
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.ResourceLoader;
+import org.springframework.core.io.DefaultResourceLoader;
+
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+
+public class RemoteResourceLoaderExample {
+    public static void main(String[] args) throws Exception {
+        ResourceLoader resourceLoader = new DefaultResourceLoader();
+        Resource resource = resourceLoader.getResource("http://example.com/resource.txt");
+
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(resource.getInputStream()))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                System.out.println(line);
+            }
+        }
+    }
+}
+```
+
+### 4. `ResourceLoader` 的扩展功能
+
+除了基本的资源加载功能外，`ResourceLoader` 还可以通过一些扩展功能来处理更复杂的场景。
+
+#### 4.1 使用 `ResourcePatternResolver` 加载多个资源
+
+`ResourcePatternResolver` 是 `ResourceLoader` 的扩展接口，支持使用通配符（如 `*`）来加载多个资源。最常见的实现是 `PathMatchingResourcePatternResolver`。
+
+```java
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
+
+public class MultipleResourcesLoader {
+    public static void main(String[] args) throws Exception {
+        PathMatchingResourcePatternResolver resolver = new PathMatchingResourcePatternResolver();
+
+        // 加载类路径下所有 .properties 文件
+        Resource[] resources = resolver.getResources("classpath*:*.properties");
+
+        for (Resource resource : resources) {
+            System.out.println("Found resource: " + resource.getFilename());
+        }
+    }
+}
+```
+
+#### 4.2 自定义 `ResourceLoader`
+
+如果你有特殊的需求，可以自定义 `ResourceLoader` 实现。例如，你可以创建一个自定义的 `ResourceLoader` 来从数据库或其他存储系统中加载资源。
+
+```java
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.ResourceLoader;
+
+public class CustomResourceLoader implements ResourceLoader {
+
+    @Override
+    public Resource getResource(String location) {
+        // 自定义逻辑，例如从数据库加载资源
+        return new CustomResource(location);
+    }
+
+    @Override
+    public ClassLoader getClassLoader() {
+        return Thread.currentThread().getContextClassLoader();
+    }
+}
+
+class CustomResource implements Resource {
+    private final String location;
+
+    public CustomResource(String location) {
+        this.location = location;
+    }
+
+    @Override
+    public boolean exists() {
+        // 自定义逻辑判断资源是否存在
+        return false;
+    }
+
+    @Override
+    public InputStream getInputStream() throws IOException {
+        // 自定义逻辑返回输入流
+        return null;
+    }
+
+    // 其他方法可以根据需要实现
+}
+```
+
+### 5. 总结
+
+- **`ResourceLoader` 接口**：提供了统一的方式来加载不同类型的资源（如类路径资源、文件系统资源、URL 资源等）。
+- **常见实现类**：
+  - `DefaultResourceLoader`：默认实现，支持类路径、文件系统和 URL 资源。
+  - `ApplicationContext`：Spring 容器本身也实现了 `ResourceLoader`，可以直接用于加载资源。
+- **扩展功能**：
+  - `ResourcePatternResolver`：支持使用通配符加载多个资源。
+  - 自定义 `ResourceLoader`：可以根据需求自定义资源加载逻辑。
+- **使用场景**：
+  - 加载配置文件。
+  - 访问文件系统中的文件。
+  - 访问远程资源。
+  - 加载多个资源（如使用通配符）。
+
+通过 `ResourceLoader`，Spring 提供了一个灵活且强大的机制来加载和处理各种类型的资源。

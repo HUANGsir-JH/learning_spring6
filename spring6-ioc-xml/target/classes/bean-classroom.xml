@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd"
+>
+    <bean id="teacher" class="classroom.teacher">
+
+    </bean>
+
+    <bean id="classroom" class="classroom.Classroom">
+        <property name="cname" value="一班"/>
+        <property name="manager" ref="teacher"/>
+        <!--级联注入前需要确保嵌套对象已经实例化，可以是在类中进行无参构造，也可以在xml中进行bean的引用-->
+        <property name="manager.name" value="张三"/>
+        <property name="manager.subject" value="数学"/>
+    </bean>
+
+</beans>

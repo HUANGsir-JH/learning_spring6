@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd"
+>
+    <bean id="department" class="ditest.Department">
+        <property name="dname" value="研发部"/>
+        <property name="emps" >
+            <list>
+                <ref bean="emp1"/>
+                <ref bean="emp2"/>
+            </list>
+        </property>
+    </bean>
+
+    <!--
+        set:
+            <property name="empSet">
+                <set>
+                    <ref bean="emp1" />  里面写的是bean=“”，不是id了
+                    <ref bean="emp2" />
+                </set>
+            </property>
+
+        list:
+            <property name="empList">
+                <list>
+                    <ref bean="emp1" />
+                    <ref bean="emp2" />
+                </list>
+            </property>
+
+        map:
+            <property name="empMap">
+                <map>
+                    <entry key="emp1" value-ref="emp1" />
+                    <entry key="emp2" value-ref="emp2" />
+                </map>
+            </property>
+
+       array:
+            <property name="empArray">
+                <array>
+                    <ref bean="emp1" />
+                    <ref bean="emp2" />
+                </array>
+            </property>
+    -->
+
+    <bean id="emp1" class="ditest.Emp">
+        <property name="ename" value="张三"/>
+        <property name="age"   value="20"/>
+        <property name="department" ref="department"/>
+    </bean>
+
+    <bean id="emp2" class="ditest.Emp">
+        <property name="ename" value="李四"/>
+        <property name="age"   value="30"/>
+        <property name="department" ref="department"/>
+    </bean>
+
+    <!--级联属性赋值-->
+
+    <bean id="emp3" class="ditest.Emp">
+        <property name="ename" value="王五"/>
+        <property name="age"   value="40"/>
+        <property name="department.dname" value="安保部"/>
+    </bean>
+
+
+</beans>

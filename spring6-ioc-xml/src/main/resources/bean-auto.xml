@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+       http://www.springframework.org/schema/beans/spring-beans.xsd">
+
+<!--    根据类型自动装配-->
+<!--    <bean id="userController" class="auto.UserController.UserController" autowire="byType">-->
+<!--    </bean>-->
+
+<!--    <bean id="userService" class="auto.UserService.UserServiceImp" autowire="byType">-->
+<!--    </bean>-->
+
+<!--    <bean id="userDao" class="auto.UserDao.UserDaoImp">-->
+<!--    </bean>-->
+
+<!--    根据名称自动装配-->
+    <bean id="userController" class="auto.UserController.UserController" autowire="byName">
+    </bean>
+
+    <bean id="userService" class="auto.UserService.UserServiceImp" autowire="byName">
+    </bean>
+
+    <bean id="userDao" class="auto.UserDao.UserDaoImp">
+    </bean>
+</beans>
