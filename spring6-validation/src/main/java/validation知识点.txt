@@ -1,0 +1,265 @@
+以下是关于 **Spring Validator 使用注解** 的知识点汇总，重点在于如何通过注解实现数据验证。
+
+---
+
+## **1. 常用内置注解**
+
+Spring Validator 提供了丰富的内置注解，可以直接用于实体类字段上。以下是一些常用的注解及其作用：
+
+| 注解                  | 作用                                                                 | 示例                                                         |
+|-----------------------|----------------------------------------------------------------------|-------------------------------------------------------------|
+| `@NotNull`            | 字段不能为 `null`                                                   | `@NotNull(message = "用户名不能为空")`                      |
+| `@NotEmpty`           | 字段不能为 `null` 或空字符串（适用于字符串、集合等）                 | `@NotEmpty(message = "地址不能为空")`                       |
+| `@NotBlank`           | 字符串不能为 `null`、空字符串或仅包含空格                            | `@NotBlank(message = "描述不能为空")`                       |
+| `@Size(min, max)`     | 验证字符串、集合、数组的长度范围                                    | `@Size(min = 6, max = 20, message = "密码长度必须在6到20之间")` |
+| `@Min(value)`         | 数值必须大于等于指定值                                              | `@Min(value = 18, message = "年龄不能小于18岁")`            |
+| `@Max(value)`         | 数值必须小于等于指定值                                              | `@Max(value = 100, message = "年龄不能大于100岁")`          |
+| `@Email`              | 验证字符串是否符合电子邮件格式                                      | `@Email(message = "邮箱格式不正确")`                        |
+| `@Pattern(regexp)`    | 验证字符串是否匹配正则表达式                                        | `@Pattern(regexp = "\\d{4}", message = "必须是4位数字")`     |
+| `@DecimalMin(value)`  | 验证数值是否大于等于指定值（支持小数）                              | `@DecimalMin(value = "0.0", message = "金额不能为负数")`     |
+| `@DecimalMax(value)`  | 验证数值是否小于等于指定值（支持小数）                              | `@DecimalMax(value = "1000.0", message = "金额不能超过1000")`|
+| `@AssertTrue`         | 验证布尔值是否为 `true`                                             | `@AssertTrue(message = "必须同意条款")`                     |
+| `@Future`             | 验证日期是否为未来时间                                              | `@Future(message = "日期必须是未来时间")`                   |
+| `@Past`               | 验证日期是否为过去时间                                              | `@Past(message = "日期必须是过去时间")`                     |
+
+---
+
+## **2. 实体类中使用注解**
+
+在实体类中，直接在字段上添加注解即可完成验证规则的定义。例如：
+
+```java
+import jakarta.validation.constraints.*;
+
+public class User {
+
+    @NotNull(message = "用户名不能为空")
+    private String username;
+
+    @Size(min = 6, max = 20, message = "密码长度必须在6到20个字符之间")
+    private String password;
+
+    @Email(message = "邮箱格式不正确")
+    private String email;
+
+    @Min(value = 18, message = "年龄不能小于18岁")
+    @Max(value = 100, message = "年龄不能大于100岁")
+    private int age;
+
+    @Pattern(regexp = "^\\d{4}$", message = "邮政编码必须是4位数字")
+    private String postalCode;
+
+    // Getters and Setters
+}
+```
+
+---
+
+## **3. 在控制器中触发验证**
+
+在控制器中，可以通过 `@Valid` 或 `@Validated` 注解来触发验证逻辑。验证失败时会抛出异常。
+
+### **示例代码**
+```java
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.*;
+import jakarta.validation.Valid;
+
+@RestController
+@RequestMapping("/users")
+public class UserController {
+
+    @PostMapping
+    public String createUser(@RequestBody @Valid User user) {
+        // 如果验证通过，执行业务逻辑
+        return "用户创建成功";
+    }
+}
+```
+
+- **`@Valid`**：用于触发单个对象的验证。
+- **`@Validated`**：用于触发方法级别的验证（如参数分组）。
+
+---
+
+## **4. 处理验证失败的异常**
+
+当验证失败时，Spring 会抛出 `MethodArgumentNotValidException` 异常。可以通过全局异常处理器捕获该异常并返回友好的错误信息。
+
+### **全局异常处理示例**
+```java
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
+
+import java.util.HashMap;
+import java.util.Map;
+
+@RestControllerAdvice
+public class GlobalExceptionHandler {
+
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<Map<String, String>> handleValidationExceptions(MethodArgumentNotValidException ex) {
+        Map<String, String> errors = new HashMap<>();
+        ex.getBindingResult().getFieldErrors().forEach(error ->
+            errors.put(error.getField(), error.getDefaultMessage())
+        );
+        return new ResponseEntity<>(errors, HttpStatus.BAD_REQUEST);
+    }
+}
+```
+
+---
+
+## **5. 自定义注解与验证器**
+
+如果内置注解无法满足需求，可以自定义注解和验证器。
+
+### **步骤 1：定义自定义注解**
+```java
+import jakarta.validation.Constraint;
+import jakarta.validation.Payload;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
+
+@Constraint(validatedBy = CustomValidator.class)
+@Target({ ElementType.FIELD })
+@Retention(RetentionPolicy.RUNTIME)
+public @interface CustomValidation {
+    String message() default "自定义验证失败";
+    Class<?>[] groups() default {};
+    Class<? extends Payload>[] payload() default {};
+}
+```
+
+### **步骤 2：实现自定义验证逻辑**
+```java
+import jakarta.validation.ConstraintValidator;
+import jakarta.validation.ConstraintValidatorContext;
+
+public class CustomValidator implements ConstraintValidator<CustomValidation, String> {
+
+    @Override
+    public boolean isValid(String value, ConstraintValidatorContext context) {
+        if (value == null) {
+            return false;
+        }
+        // 自定义验证逻辑：字段必须以 "A" 开头
+        return value.startsWith("A");
+    }
+}
+```
+
+### **步骤 3：在实体类中使用自定义注解**
+```java
+public class User {
+
+    @CustomValidation(message = "字段必须以A开头")
+    private String customField;
+
+    // Getters and Setters
+}
+```
+
+---
+
+## **6. 分组验证**
+
+有时需要对不同的场景使用不同的验证规则，可以通过分组实现。
+
+### **定义分组接口**
+```java
+public interface GroupA {}
+public interface GroupB {}
+```
+
+### **在注解中指定分组**
+```java
+public class User {
+
+    @NotNull(groups = GroupA.class, message = "用户名不能为空")
+    private String username;
+
+    @Size(min = 6, max = 20, groups = GroupB.class, message = "密码长度必须在6到20之间")
+    private String password;
+
+    // Getters and Setters
+}
+```
+
+### **在控制器中指定分组**
+```java
+@PostMapping("/validateGroupA")
+public String validateGroupA(@RequestBody @Validated(GroupA.class) User user) {
+    return "GroupA 验证通过";
+}
+
+@PostMapping("/validateGroupB")
+public String validateGroupB(@RequestBody @Validated(GroupB.class) User user) {
+    return "GroupB 验证通过";
+}
+```
+
+---
+
+## **7. 嵌套验证**
+
+如果实体类中包含其他对象，可以通过 `@Valid` 注解进行嵌套验证。
+
+### **示例代码**
+```java
+public class Address {
+    @NotBlank(message = "街道不能为空")
+    private String street;
+
+    @NotBlank(message = "城市不能为空")
+    private String city;
+
+    // Getters and Setters
+}
+
+public class User {
+    @NotBlank(message = "用户名不能为空")
+    private String username;
+
+    @Valid // 触发嵌套验证
+    private Address address;
+
+    // Getters and Setters
+}
+```
+
+---
+
+## **8. 总结**
+
+通过注解形式使用 Spring Validator 可以轻松实现数据验证，主要步骤包括：
+1. 在实体类字段上添加验证注解。
+2. 在控制器中使用 `@Valid` 或 `@Validated` 触发验证。
+3. 捕获验证失败的异常并返回友好的错误信息。
+4. 根据需求自定义注解和验证器。
+5. 支持分组验证和嵌套验证。
+
+这种机制不仅减少了手动校验的工作量，还提高了代码的可读性和维护性。
+
+====================================================================================================
+
+## **9. 配置 Validator**
+```java
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
+
+@Configuration
+public class ValidatorConfig {
+
+    @Bean
+    public LocalValidatorFactoryBean validator() {
+        return new LocalValidatorFactoryBean();
+    }
+}
+```
