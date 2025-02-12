@@ -1,0 +1,195 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="mybatis.mapper.BrandMapper">
+    <!--
+        数据库列名与实体类属性名不一致时，无法自动映射
+            - 起别名：给列名起别名，与实体类属性名一致
+                select company_name as companyName from tb_brand;
+            - sql片段：将列名与实体类属性名映射关系定义在sql片段中
+                <sql id="brandColumn"> // 定义sql片段，可写多个
+                    company_name as companyName, brand_name as brandName
+                </sql>
+                <select>
+                    select <include refid="brandColumn"/> from tb_brand;
+                </select>
+            - resultMap：将列名与实体类属性名映射关系定义在resultMap中
+                <resultMap id="brandMap" type="mybatis.pojo.Brand">
+                    <result column="company_name" property="companyName"/>
+                    <result column="brand_name" property="brandName"/>
+                </resultMap>
+                <select resultMap="brandMap">
+                    select * from tb_brand;
+                </select>
+    -->
+    <resultMap id="BrandResultMap" type="mybatis.pojo.Brand">
+        <result column="brand_name" property="brandName"/>
+        <result column="company_name" property="companyName"/>
+    </resultMap>
+    <!--不再写resultType属性，而是写resultMap属性，指定resultMap的id-->
+    <select id="selectAll" resultMap="BrandResultMap">
+        SELECT * FROM tb_brand;
+    </select>
+
+    <!--
+        参数占位符：
+            - #{}：占位符，MyBatis会将#{}替换为?，并使用PreparedStatement预编译SQL语句，防止SQL注入
+            - ${}：字符串拼接，MyBatis会将${}替换为实际的值，不使用PreparedStatement预编译SQL语句，存在SQL注入风险。
+        特殊字符处理：
+            - #{}：MyBatis会自动处理特殊字符，如单引号、双引号、反斜杠等
+            - ${}：MyBatis不会处理特殊字符，直接拼接到SQL语句中
+            - 转义字符：&lt;、&gt;、&amp;、&apos;、&quot;
+                - &lt;：小于号<
+                - &gt;：大于号>
+                - &amp;：与号&
+                - &apos;：单引号'
+                - &quot;：双引号"
+                - select * from tb_brand where brand_name = &apos;${brandName}&apos;
+            - CDATA：<![CDATA[]]>，不需要转义特殊字符
+                - select * from tb_brand where brand_name = <![CDATA[${brandName}]]>;
+    -->
+    <select id="selectById" resultMap="BrandResultMap">
+        SELECT * FROM tb_brand WHERE id = #{id};
+        <!--#{id}表示占位符，#{}中的id与方法参数名一致-->
+    </select>
+
+    <!--
+        动态SQL：
+            - if：判断条件是否成立，成立则执行SQL语句
+                - <if test="brandName != null and brandName != ''">
+                    AND brand_name like #{brandName}
+                  </if>
+            - choose、when、otherwise：选择条件，满足条件则执行SQL语句
+                - <choose>
+                    <when test="brandName != null and brandName != ''">
+                        AND brand_name like #{brandName}
+                    </when>
+                    <when test="companyName != null and companyName != ''">
+                        AND company_name like #{companyName}
+                    </when>
+                    <otherwise>
+                        AND status = #{status}
+                    </otherwise>
+                  </choose>
+            - trim：去除多余的字符，如AND、OR
+                - <trim prefix="WHERE" prefixOverrides="AND | OR">
+                    AND brand_name like #{brandName}
+                    AND company_name like #{companyName}
+                  </trim>
+            - where：去除多余的AND、OR，并添加WHERE
+                - <where>
+                    AND brand_name like #{brandName}
+                  </where>
+            - set：去除多余的逗号，并添加SET
+                - <set>
+                    brand_name = #{brandName},
+                  </set>
+            - foreach：遍历集合，生成IN语句
+                - <foreach collection="list" item="item" open="(" close=")" separator=",">
+                    #{item}
+                  </foreach>
+            - bind：绑定变量，将变量值绑定到指定变量名
+            - sql片段：定义SQL片段，可重复使用
+    -->
+    <select id="selectByCondition" resultMap="BrandResultMap">
+        SELECT * FROM tb_brand
+        <where>
+            <if test="brandName != null and brandName != ''">
+                AND brand_name like #{brandName}
+            </if>
+            <if test="companyName != null and companyName != ''">
+                AND company_name like #{companyName}
+            </if>
+            <if test="status != null">
+                AND status = #{status}
+            </if>
+        </where>
+    </select>
+
+    <select id="selectBySingleCondition" resultMap="BrandResultMap">
+        select * from tb_brand
+        <where>
+            <choose> <!--相当于Java的switch-->
+                <when test="brandName != null and brandName != ''"> <!--相当于Java的case-->
+                    AND brand_name like #{brandName}
+                </when>
+                <when test="companyName != null and companyName != ''">
+                    AND company_name like #{companyName}
+                </when>
+                <otherwise> <!--相当于Java的default-->
+                    AND status = #{status}
+                </otherwise>
+            </choose>
+        </where>
+    </select>
+
+    <!--
+        添加后返回主键：
+            - useGeneratedKeys：使用数据库自动生成的主键
+            - keyProperty：指定实体类属性名，接收数据库自动生成的主键
+            - keyColumn：指定数据库列名，接收数据库自动生成的主键
+    -->
+    <insert id="addBrand" useGeneratedKeys="true" keyProperty="id">
+        insert into tb_brand(brand_name, company_name, ordered, description, status)
+        values(#{brandName}, #{companyName}, #{ordered}, #{description}, #{status});
+    </insert>
+
+    <!--
+        修改：
+            - set：设置需要修改的列
+            - where：设置修改条件
+    -->
+    <update id="updateBrand">
+        update tb_brand
+        <set>
+            <if test="brandName != null and brandName != ''">
+                brand_name = #{brandName},
+            </if>
+            <if test="companyName != null and companyName != ''">
+                company_name = #{companyName},
+            </if>
+            <if test="ordered != null">
+                ordered = #{ordered},
+            </if>
+            <if test="description != null and description != ''">
+                description = #{description},
+            </if>
+            <if test="status != null">
+                status = #{status},
+            </if>
+        </set>
+        where id = #{id};
+    </update>
+
+    <delete id="deleteById">
+        delete from tb_brand where id = #{id};
+    </delete>
+
+    <!--
+        批量删除：
+            - foreach：遍历集合，生成IN语句
+            - collection：集合名
+            - item：集合中的元素
+            - open：开头
+            - close：结尾
+            - separator：分隔符
+        mybatis会把数组参数封装成Map，Map的key为array，value为数组
+            - collection="array"：指定Map的key,固定写法
+            - 在mapper接口中，使用@Param注解指定数组参数名
+                - void deleteBatchByIds(@Param("ids") Integer[] ids);
+                - 就可以写 collection="ids"
+    -->
+    <delete id="deleteBatchByIds">
+        delete from tb_brand
+        <where>
+            <foreach collection="ids" item="id" open="id in (" close=")" separator=",">
+                #{id}
+                <!-- id in (id1,id2,id3) -->
+            </foreach>
+        </where>
+    </delete>
+
+
+</mapper>
