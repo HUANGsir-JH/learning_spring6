@@ -9,3 +9,6 @@
 - 基于[该视频](https://www.bilibili.com/video/BV1MT4y1k7wZ?spm_id_from=333.788.videopod.episodes&vd_source=45792527913efdcbf520573d0c16b421)进行mybatis的基础学习，主要包括增删改查和动态sql
 ## Final Time
 2025年2月8日 周六 21:06
+
+2025年2月12日 元宵节 周三 22:17
+
